@@ -18,6 +18,11 @@ from .functions import _Function
 from .utils import check_random_state
 
 
+FUNCTION_PRIORITY = {
+    'add': 25, 'sub': 25, 'mul': 50, 'div': 5, 'log': 5, 'cos': 5
+}
+
+
 class _Program(object):
 
     """A program-like representation of the evolved program.
@@ -136,6 +141,8 @@ class _Program(object):
                  program=None):
 
         self.function_set = function_set
+        self.function_priority = np.array([FUNCTION_PRIORITY[x.name] for x in function_set])
+        self.function_priority = self.function_priority / self.function_priority.sum()
         self.arities = arities
         self.init_depth = (init_depth[0], init_depth[1] + 1)
         self.init_method = init_method
@@ -183,7 +190,7 @@ class _Program(object):
         max_depth = random_state.randint(*self.init_depth)
 
         # Start a program with a function to avoid degenerative programs
-        function = random_state.randint(len(self.function_set))
+        function = random_state.choice(len(self.function_set), p=self.function_priority)
         function = self.function_set[function]
         program = [function]
         terminal_stack = [function.arity]
@@ -195,7 +202,7 @@ class _Program(object):
             # Determine if we are adding a function or terminal
             if (depth < max_depth) and (method == 'full' or
                                         choice <= len(self.function_set)):
-                function = random_state.randint(len(self.function_set))
+                function = random_state.choice(len(self.function_set), p=self.function_priority)
                 function = self.function_set[function]
                 program.append(function)
                 terminal_stack.append(function.arity)
@@ -206,7 +213,8 @@ class _Program(object):
                 else:
                     terminal = random_state.randint(self.n_features)
                 if terminal == self.n_features:
-                    terminal = random_state.uniform(*self.const_range)
+                    # terminal = random_state.uniform(*self.const_range)
+                    terminal = random_state.randint(self.const_range[1]) + 1.
                     if self.const_range is None:
                         # We should never get here
                         raise ValueError('A constant was produced with '

@@ -537,15 +537,32 @@ class BaseSymbolic(BaseEstimator, metaclass=ABCMeta):
             if self.verbose:
                 self._verbose_reporter(self.run_details_)
 
-            # Check for early stopping
-            if self._metric.greater_is_better:
-                best_fitness = fitness[np.argmax(fitness)]
-                if best_fitness >= self.stopping_criteria:
-                    break
-            else:
-                best_fitness = fitness[np.argmin(fitness)]
-                if best_fitness <= self.stopping_criteria:
-                    break
+            if gen > 0:
+                # Check for early stopping
+                if self._metric.greater_is_better:
+                    prev_scores = [-1. * x for x in self.run_details_['best_fitness'][:-1]]
+                    current_score = -1. * self.run_details_['best_fitness'][-1]
+                else:
+                    prev_scores = [x for x in self.run_details_['best_fitness'][:-1]]
+                    current_score = self.run_details_['best_fitness'][-1]
+
+                prev_best_ind = prev_scores.index(min(prev_scores))
+                step_to_prev = len(prev_scores) - prev_best_ind
+                PATIENCE = 3
+                if step_to_prev > PATIENCE:
+                    # percentage improvement over the best
+                    improvement_pct = (current_score - min(prev_scores)) / min(prev_scores)
+                    if improvement_pct >= -1 * self.stopping_criteria:
+                        break
+
+            # if self._metric.greater_is_better:
+            #     best_fitness = fitness[np.argmax(fitness)]
+            #     if best_fitness >= self.stopping_criteria:
+            #         break
+            # else:
+            #     best_fitness = fitness[np.argmin(fitness)]
+            #     if best_fitness <= self.stopping_criteria:
+            #         break
 
         if isinstance(self, TransformerMixin):
             # Find the best individuals in the final generation
