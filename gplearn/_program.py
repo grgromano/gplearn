@@ -18,9 +18,9 @@ from .functions import _Function
 from .utils import check_random_state
 
 
-FUNCTION_PRIORITY = {
-    'add': 25, 'sub': 25, 'mul': 50, 'div': 5, 'log': 5, 'cos': 5
-}
+# FUNCTION_PRIORITY = {
+#     'add': 25, 'sub': 25, 'mul': 50, 'div': 5, 'log': 5, 'cos': 5
+# }
 
 
 class _Program(object):
@@ -32,7 +32,7 @@ class _Program(object):
 
     Parameters
     ----------
-    function_set : list
+    function_set : dictionary
         A list of valid functions to use in the program.
 
     arities : dict
@@ -140,8 +140,8 @@ class _Program(object):
                  feature_names=None,
                  program=None):
 
-        self.function_set = function_set
-        self.function_priority = np.array([FUNCTION_PRIORITY[x.name] for x in function_set])
+        self.function_set = list(function_set.keys())
+        self.function_priority = np.array([function_set[x] for x in self.function_set])
         self.function_priority = self.function_priority / self.function_priority.sum()
         self.arities = arities
         self.init_depth = (init_depth[0], init_depth[1] + 1)
@@ -213,8 +213,8 @@ class _Program(object):
                 else:
                     terminal = random_state.randint(self.n_features)
                 if terminal == self.n_features:
-                    # terminal = random_state.uniform(*self.const_range)
-                    terminal = random_state.randint(self.const_range[1]) + 1.
+                    terminal = random_state.uniform(*self.const_range)
+                    # terminal = random_state.randint(self.const_range[1]) + 1.
                     if self.const_range is None:
                         # We should never get here
                         raise ValueError('A constant was produced with '

@@ -135,7 +135,9 @@ def _protected_sqrt(x1):
 def _protected_log(x1):
     """Closure of log for zero arguments."""
     with np.errstate(divide='ignore', invalid='ignore'):
-        return np.where(np.abs(x1) > 0.001, np.log(np.abs(x1)), 0.)
+        return np.where(x1 > 1e-9, np.log(x1), 1000)
+
+        # return np.where(np.abs(x1) > 0.001, np.log(np.abs(x1)), 0.)
 
 
 def _protected_inverse(x1):

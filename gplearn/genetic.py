@@ -174,7 +174,7 @@ class BaseSymbolic(BaseEstimator, metaclass=ABCMeta):
                  const_range=(-1., 1.),
                  init_depth=(2, 6),
                  init_method='half and half',
-                 function_set=('add', 'sub', 'mul', 'div'),
+                 function_set=None,
                  transformer=None,
                  metric='mean absolute error',
                  parsimony_coefficient=0.001,
@@ -191,7 +191,8 @@ class BaseSymbolic(BaseEstimator, metaclass=ABCMeta):
                  n_jobs=1,
                  verbose=0,
                  random_state=None):
-
+        if function_set is None:
+            function_set = {'add': 1, 'sub': 1, 'mul': 1, 'div': 1}
         self.population_size = population_size
         self.hall_of_fame = hall_of_fame
         self.n_components = n_components
@@ -327,15 +328,15 @@ class BaseSymbolic(BaseEstimator, metaclass=ABCMeta):
                              'hall_of_fame (%d).' % (self.n_components,
                                                      self.hall_of_fame))
 
-        self._function_set = []
-        for function in self.function_set:
+        self._function_set = {}
+        for function, priority in self.function_set.items():
             if isinstance(function, str):
                 if function not in _function_map:
                     raise ValueError('invalid function name %s found in '
                                      '`function_set`.' % function)
-                self._function_set.append(_function_map[function])
+                self._function_set[_function_map[function]] = priority
             elif isinstance(function, _Function):
-                self._function_set.append(function)
+                self._function_set[function] = priority
             else:
                 raise ValueError('invalid type %s found in `function_set`.'
                                  % type(function))
@@ -344,7 +345,7 @@ class BaseSymbolic(BaseEstimator, metaclass=ABCMeta):
 
         # For point-mutation to find a compatible replacement node
         self._arities = {}
-        for function in self._function_set:
+        for function, _ in self._function_set.items():
             arity = function.arity
             self._arities[arity] = self._arities.get(arity, [])
             self._arities[arity].append(function)
@@ -811,7 +812,7 @@ class SymbolicRegressor(BaseSymbolic, RegressorMixin):
                  const_range=(-1., 1.),
                  init_depth=(2, 6),
                  init_method='half and half',
-                 function_set=('add', 'sub', 'mul', 'div'),
+                 function_set=None,
                  metric='mean absolute error',
                  parsimony_coefficient=0.001,
                  p_crossover=0.9,
