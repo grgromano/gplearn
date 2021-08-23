@@ -201,14 +201,19 @@ class _Program(object):
             choice = random_state.randint(choice)
             # Determine if we are adding a function or terminal
             if (depth < max_depth) and (method == 'full' or
-                                        choice <= len(self.function_set)):
+                                        choice <= len(self.function_set)) and program[-1] != 'log':
                 function = random_state.choice(len(self.function_set), p=self.function_priority)
                 function = self.function_set[function]
                 program.append(function)
                 terminal_stack.append(function.arity)
             else:
                 # We need a terminal, add a variable or constant
-                if self.const_range is not None:
+                # 1. has constant range
+                # 2. no log(1.5)
+                # 3. no Add, 1.5, 1.5
+                if (self.const_range is not None) and \
+                        program[-1] != 'log' and \
+                        not (isinstance(program[-1], float) or isinstance(program[-1], int)):
                     terminal = random_state.randint(self.n_features + 1)
                 else:
                     terminal = random_state.randint(self.n_features)
