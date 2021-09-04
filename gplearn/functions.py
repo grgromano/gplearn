@@ -126,6 +126,10 @@ def _protected_division(x1, x2):
     with np.errstate(divide='ignore', invalid='ignore'):
         return np.where(np.abs(x2) > 0.001, np.divide(x1, x2), 1.)
 
+def _protected_power(x1, x2):
+    """Closure of power (x1/x2) for negative numbers."""
+    with np.errstate(divide='ignore', invalid='ignore'):
+        return np.where(np.logical_and(np.minimum(x1, x2) >= 0, np.maximum(x1, x2) <= 10), np.power(x1, x2), 1000)
 
 def _protected_sqrt(x1):
     """Closure of square root for negative arguments."""
@@ -156,6 +160,7 @@ add2 = _Function(function=np.add, name='add', arity=2)
 sub2 = _Function(function=np.subtract, name='sub', arity=2)
 mul2 = _Function(function=np.multiply, name='mul', arity=2)
 div2 = _Function(function=_protected_division, name='div', arity=2)
+pow2 = _Function(function=_protected_power, name='pow', arity=2)
 sqrt1 = _Function(function=_protected_sqrt, name='sqrt', arity=1)
 log1 = _Function(function=_protected_log, name='log', arity=1)
 neg1 = _Function(function=np.negative, name='neg', arity=1)
@@ -172,6 +177,7 @@ _function_map = {'add': add2,
                  'sub': sub2,
                  'mul': mul2,
                  'div': div2,
+                 'pow': pow2,
                  'sqrt': sqrt1,
                  'log': log1,
                  'abs': abs1,

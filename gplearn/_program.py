@@ -199,9 +199,23 @@ class _Program(object):
             depth = len(terminal_stack)
             choice = self.n_features + len(self.function_set)
             choice = random_state.randint(choice)
+
+            last_pow = False
+            if (not isinstance(program[-1], float)) and (not isinstance(program[-1], int)):
+                if program[-1].name == 'pow':
+                    last_pow = True
+
+            last_pow2 = False
+
+            if len(program) > 1:
+                if (not isinstance(program[-2], float)) and (not isinstance(program[-2], int)):
+                    if program[-2].name == 'pow':
+                        last_pow2 = True
+
             # Determine if we are adding a function or terminal
-            if (depth < max_depth) and (method == 'full' or
-                                        choice <= len(self.function_set)) and program[-1] != 'log':
+            if (depth < max_depth) and (method == 'full' or choice <= len(self.function_set))\
+                    and program[-1] != 'log'\
+                    and (not last_pow) and (not last_pow2):
                 function = random_state.choice(len(self.function_set), p=self.function_priority)
                 function = self.function_set[function]
                 program.append(function)
@@ -213,10 +227,15 @@ class _Program(object):
                 # 3. no Add, 1.5, 1.5
                 if (self.const_range is not None) and \
                         program[-1] != 'log' and \
+                        (not last_pow) and \
                         not (isinstance(program[-1], float) or isinstance(program[-1], int)):
                     terminal = random_state.randint(self.n_features + 1)
                 else:
                     terminal = random_state.randint(self.n_features)
+
+                if last_pow2:
+                    terminal = self.n_features
+
                 if terminal == self.n_features:
                     terminal = random_state.uniform(*self.const_range)
                     # terminal = random_state.randint(self.const_range[1]) + 1.
@@ -229,6 +248,15 @@ class _Program(object):
                 while terminal_stack[-1] == 0:
                     terminal_stack.pop()
                     if not terminal_stack:
+                        # s = []
+                        # for i in program:
+                        #     if isinstance(i, float):
+                        #         s.append(str(i))
+                        #     elif isinstance(i, int):
+                        #         s.append(str('X'))
+                        #     else:
+                        #         s.append(i.name)
+                        # print(s)
                         return program
                     terminal_stack[-1] -= 1
 

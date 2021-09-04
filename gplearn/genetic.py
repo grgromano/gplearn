@@ -145,6 +145,8 @@ def _parallel_evolve(n_programs, parents, X, y, sample_weight, seeds, params):
         oob_sample_weight[indices] = 0
 
         program.raw_fitness_ = program.raw_fitness(X, y, curr_sample_weight)
+        if np.isnan(program.raw_fitness_):
+            print(program)
         if max_samples < n_samples:
             # Calculate OOB fitness
             program.oob_fitness_ = program.raw_fitness(X, y, oob_sample_weight)
