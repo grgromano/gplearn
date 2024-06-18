@@ -35,6 +35,29 @@ __all__ = ['SymbolicRegressor', 'SymbolicClassifier', 'SymbolicTransformer']
 MAX_INT = np.iinfo(np.int32).max
 
 
+def promising_programs(programs, gen, parsimony_coefficient, n_promising=10):
+    """Return the n_promising most promising programs."""
+
+    if gen == 0: # l'estrazione avviene solo ad una data generazione
+
+        print('programs:')
+        print(np.shape(programs))
+        print(programs[0])
+
+        fitness = [program.fitness(parsimony_coefficient) for program in programs]
+        print('fitness:')
+        print(np.shape(fitness))
+        print(fitness[0:100])
+        # if programs[0].metric.greater_is_better:
+        #     return [programs[i] for i in np.argsort(fitness)[-n_promising:]]
+        # else:
+        #     return [programs[i] for i in np.argsort(fitness)[:n_promising]]
+        return
+    else:
+        return
+    
+
+
 def _parallel_evolve(n_programs, parents, X, y, sample_weight, seeds, params):
     """Private function used to build a batch of programs within a job."""
     n_samples, n_features = X.shape
@@ -518,6 +541,23 @@ class BaseSymbolic(BaseEstimator, metaclass=ABCMeta):
             elif gen > 0:
                 # Remove old generations
                 self._programs[gen - 1] = None
+
+            ##### RMK. a questo punto, in _programs[gen] ci sono i programmi della generazione gen, inserire una funzione capace di analizzarli e salvarsi ciò che vogliamo 
+            '''
+            def promising_programs(programs, n_promising, parsimony_coefficient):
+                """Return the n_promising most promising programs."""
+
+                if gen == 0: # l'estrazione avviene solo ad una data generazione 
+
+                    fitness = [program.fitness(parsimony_coefficient) for program in programs]
+                    if programs[0].metric.greater_is_better:
+                        return [programs[i] for i in np.argsort(fitness)[-n_promising:]]
+                    else:
+                        return [programs[i] for i in np.argsort(fitness)[:n_promising]]
+            '''
+            promising_programs(self._programs[gen], gen, parsimony_coefficient, n_promising=10)
+            
+
 
             # Record run details
             if self._metric.greater_is_better:
