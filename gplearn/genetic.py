@@ -307,6 +307,8 @@ class BaseSymbolic(BaseEstimator, metaclass=ABCMeta):
             Returns self.
 
         """
+        print('Forza Italia!')
+        
         random_state = check_random_state(self.random_state)
 
         # Check arrays
