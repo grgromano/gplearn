@@ -34,30 +34,6 @@ __all__ = ['SymbolicRegressor', 'SymbolicClassifier', 'SymbolicTransformer']
 
 MAX_INT = np.iinfo(np.int32).max
 
-
-def promising_programs(programs, gen, parsimony_coefficient, n_promising=10):
-    """Return the n_promising most promising programs."""
-
-    if gen == 0: # l'estrazione avviene solo ad una data generazione
-
-        print('programs:')
-        print(np.shape(programs))
-        print(programs[0])
-
-        fitness = [program.fitness(parsimony_coefficient) for program in programs]
-        print('fitness:')
-        print(np.shape(fitness))
-        print(fitness[0:100])
-        # if programs[0].metric.greater_is_better:
-        #     return [programs[i] for i in np.argsort(fitness)[-n_promising:]]
-        # else:
-        #     return [programs[i] for i in np.argsort(fitness)[:n_promising]]
-        return
-    else:
-        return
-    
-
-
 def _parallel_evolve(n_programs, parents, X, y, sample_weight, seeds, params):
     """Private function used to build a batch of programs within a job."""
     n_samples, n_features = X.shape
@@ -179,6 +155,148 @@ def _parallel_evolve(n_programs, parents, X, y, sample_weight, seeds, params):
     return programs
 
 
+def get_building_blocks(building_blocks, programs, parsimony_coefficient, X, params):
+    """finds the most promising building blocks"""
+
+    # search parameters: 
+    n_promising = 15 # number of promising promgrams to select
+    n_subprograms = 15 # number of subprograms to extract from each promising program
+    max_length = 8 # maximum length of subprograms
+    min_length = 3 # minimum length of subprograms
+    # (RMK. the generation of the search can be changed directly at the function call: if gen == ...)
+
+    # select the best n_promising programs:
+    fitness = [program.fitness(parsimony_coefficient) for program in programs]
+    if programs[0].metric.greater_is_better:
+        promising_programs = [programs[i] for i in np.argsort(fitness)[-n_promising:]]
+    else:
+        promising_programs = [programs[i] for i in np.argsort(fitness)[:n_promising]]
+    print(' ')
+    print('promising programs:')
+    for program in promising_programs:
+        print(program)
+    print(' ')
+
+    # extract subprograms from the promising programs:
+    subprograms = []
+    for program in promising_programs:
+        subprograms.extend(get_subprograms(program, X, params, n_subprograms, max_length, min_length))
+
+    # filtering, part 2: -> spostato in gp_utils.py, considerare di spostare l'intera porzione dell'estrazione dei building blocks
+    # tol = 1e-2 # tolerance for filtering similar subprograms 
+    # testing_range = [0.3, 0.7] # range of x values for testing similarity
+    # subprograms_filtered = []
+    # x_samples = np.linspace(testing_range[0], testing_range[1], 10).reshape(-1, 1) 
+    # samples = []
+    # for i in range(len(subprograms)):
+
+    #     flag = 1
+    #     f_hat = subprograms[i].execute 
+    #     aux = f_hat(x_samples) #print(f_hat(x_samples))2 
+    #     for j in range(len(samples)):
+    #         if root_mean_squared_error(aux, samples[j]) < tol: # filter similar subprograms
+    #             flag = 0
+    #     if flag:
+    #         samples.append(aux)
+    #         subprograms_filtered.append(subprograms[i])
+    
+    # print('building blocks:') -> spostato in gp_utils.py
+    # for i in range(len(subprograms_filtered)):
+    #     print(subprograms_filtered[i])
+    # print('number of building blocks: ', len(subprograms_filtered))
+    # print(' ')
+
+    
+    # add the new building blocks to the existing ones:
+    if building_blocks is None:
+        building_blocks = subprograms
+    else:
+        building_blocks.extend(subprograms)
+    # print(' ')
+    # print('building blocks - partial:')
+    # for i in range(len(building_blocks)):
+    #     print(building_blocks[i])
+
+    return building_blocks
+
+
+def get_subprograms(program, X, params, n_subprograms, max_length, min_length):
+    """function used to extract subprograms from a program"""
+
+    _, n_features = X.shape
+    function_set = params['function_set']
+    arities = params['arities']
+    init_depth = params['init_depth']
+    init_method = params['init_method']
+    const_range = params['const_range']
+    metric = params['_metric']
+    transformer = params['_transformer']
+    parsimony_coefficient = params['parsimony_coefficient']
+    p_point_replace = params['p_point_replace']
+    feature_names = params['feature_names']
+
+    #print('subprograms: ')
+    subprograms = []
+    for _ in range(n_subprograms):
+
+        random_state = check_random_state(None)
+        start, end = program.get_subtree(random_state) #print('start: ', start) #print('end: ', end)
+        subprogram_l = program.program[start:end]
+
+        # filtering, part 1:
+        if len(subprogram_l) < min_length or len(subprogram_l) > max_length: # filter too short or long subprograms 
+            continue
+        subprog_list, _, _ = parse_program_to_list(subprogram_l)
+        if subprog_list[0] == 'add' or subprog_list[0] == 'mul' or subprog_list[0] == 'sub': # filter subprograms starting with 'add', 'mul' or 'sub': SINDy will provide linear combinations
+            continue
+
+        # build the corresponding programs:
+        subprogram = _Program(function_set=function_set,
+                            arities=arities,
+                            init_depth=init_depth,
+                            init_method=init_method,
+                            n_features=n_features,
+                            metric=metric,
+                            transformer=transformer,
+                            const_range=const_range,
+                            p_point_replace=p_point_replace,
+                            parsimony_coefficient=parsimony_coefficient,
+                            feature_names=feature_names,
+                            random_state=random_state,
+                            program=subprogram_l)
+        #print(subprogram)
+        subprograms.append(subprogram)
+        
+    return subprograms
+
+
+def parse_program_to_list(program):
+    symbol_list = list()
+    var_list = list()
+    coef_list = list()
+
+    for i in program:
+        if isinstance(i, int):
+            symbol_list.append('X' + str(i))
+            var_list.append('X' + str(i))
+        elif isinstance(i, float):
+            symbol_list.append(str(i))
+            coef_list.append(str(i))
+        else:
+            if i.name == 'log':
+                symbol_list.append('ln')
+            elif i.name == 'neg':
+                symbol_list.append('sub')
+                symbol_list.append('0')
+            else:
+                symbol_list.append(i.name)
+
+    var_list = list(set(var_list))
+    coef_list = list(set(coef_list))
+    return symbol_list, var_list, coef_list
+
+
+
 class BaseSymbolic(BaseEstimator, metaclass=ABCMeta):
 
     """Base class for symbolic regression / classification estimators.
@@ -244,6 +362,7 @@ class BaseSymbolic(BaseEstimator, metaclass=ABCMeta):
         self.n_jobs = n_jobs
         self.verbose = verbose
         self.random_state = random_state
+        self.building_blocks = None
 
     def _verbose_reporter(self, run_details=None):
         """A report of the progress of the evolution process.
@@ -544,22 +663,11 @@ class BaseSymbolic(BaseEstimator, metaclass=ABCMeta):
                 # Remove old generations
                 self._programs[gen - 1] = None
 
-            ##### RMK. a questo punto, in _programs[gen] ci sono i programmi della generazione gen, inserire una funzione capace di analizzarli e salvarsi ciò che vogliamo 
-            '''
-            def promising_programs(programs, n_promising, parsimony_coefficient):
-                """Return the n_promising most promising programs."""
-
-                if gen == 0: # l'estrazione avviene solo ad una data generazione 
-
-                    fitness = [program.fitness(parsimony_coefficient) for program in programs]
-                    if programs[0].metric.greater_is_better:
-                        return [programs[i] for i in np.argsort(fitness)[-n_promising:]]
-                    else:
-                        return [programs[i] for i in np.argsort(fitness)[:n_promising]]
-            '''
-            promising_programs(self._programs[gen], gen, parsimony_coefficient, n_promising=10)
-            
-
+            # At the desired generation, extract the promising building blocks from the generation's programs:
+            if gen==3 or gen==5 or gen==10 or gen==19: 
+                # print(' ')
+                # print('generation: ', gen)
+                self.building_blocks = get_building_blocks(self.building_blocks, self._programs[gen], parsimony_coefficient, X, params)
 
             # Record run details
             if self._metric.greater_is_better:
