@@ -155,13 +155,13 @@ def _parallel_evolve(n_programs, parents, X, y, sample_weight, seeds, params):
     return programs
 
 
-def get_building_blocks(building_blocks, programs, parsimony_coefficient, X, params):
-    """finds the most promising building blocks"""
+def get_building_blocks(building_blocks, programs, parsimony_coefficient, X, params): # grg
+    """given a set of programs, it finds the most promising building blocks"""
 
     # search parameters: 
     n_promising = 15 # number of promising promgrams to select
     n_subprograms = 15 # number of subprograms to extract from each promising program
-    max_length = 8 # maximum length of subprograms
+    max_length = 6 # maximum length of subprograms
     min_length = 3 # minimum length of subprograms
     # (RMK. the generation of the search can be changed directly at the function call: if gen == ...)
 
@@ -171,11 +171,11 @@ def get_building_blocks(building_blocks, programs, parsimony_coefficient, X, par
         promising_programs = [programs[i] for i in np.argsort(fitness)[-n_promising:]]
     else:
         promising_programs = [programs[i] for i in np.argsort(fitness)[:n_promising]]
-    print(' ')
-    print('promising programs:')
-    for program in promising_programs:
-        print(program)
-    print(' ')
+    # print(' ')
+    # print('promising programs:')
+    # for program in promising_programs:
+    #     print(program)
+    # print(' ')
 
     # extract subprograms from the promising programs:
     subprograms = []
@@ -220,8 +220,8 @@ def get_building_blocks(building_blocks, programs, parsimony_coefficient, X, par
     return building_blocks
 
 
-def get_subprograms(program, X, params, n_subprograms, max_length, min_length):
-    """function used to extract subprograms from a program"""
+def get_subprograms(program, X, params, n_subprograms, max_length, min_length): # grg
+    """extracts subprograms from a program"""
 
     _, n_features = X.shape
     function_set = params['function_set']
@@ -247,8 +247,16 @@ def get_subprograms(program, X, params, n_subprograms, max_length, min_length):
         if len(subprogram_l) < min_length or len(subprogram_l) > max_length: # filter too short or long subprograms 
             continue
         subprog_list, _, _ = parse_program_to_list(subprogram_l)
-        if subprog_list[0] == 'add' or subprog_list[0] == 'mul' or subprog_list[0] == 'sub': # filter subprograms starting with 'add', 'mul' or 'sub': SINDy will provide linear combinations
+
+
+        # STANDARD VERSION:
+        if subprog_list[0] == 'add' or subprog_list[0] == 'mul' or subprog_list[0] == 'sub' or subprog_list[0] == 'neg': # filter subprograms starting with 'add', 'neg', 'mul' or 'sub': SINDy will provide linear combinations
             continue
+        
+        # POLYNOMIAL VERSION:
+        # if subprog_list[0] == 'add' or subprog_list[0] == 'sub' or subprog_list[0] == 'neg': # filter subprograms starting with 'add', 'neg' or 'sub', NOT 'mul'
+        #     continue
+
 
         # build the corresponding programs:
         subprogram = _Program(function_set=function_set,
@@ -270,7 +278,7 @@ def get_subprograms(program, X, params, n_subprograms, max_length, min_length):
     return subprograms
 
 
-def parse_program_to_list(program):
+def parse_program_to_list(program): # grg
     symbol_list = list()
     var_list = list()
     coef_list = list()
@@ -336,6 +344,8 @@ class BaseSymbolic(BaseEstimator, metaclass=ABCMeta):
                  random_state=None):
         if function_set is None:
             function_set = {'add': 1, 'sub': 1, 'mul': 1, 'div': 1}
+        print('Functions set: ', function_set) # grg
+        print(' ') 
         self.population_size = population_size
         self.hall_of_fame = hall_of_fame
         self.n_components = n_components
@@ -362,7 +372,7 @@ class BaseSymbolic(BaseEstimator, metaclass=ABCMeta):
         self.n_jobs = n_jobs
         self.verbose = verbose
         self.random_state = random_state
-        self.building_blocks = None
+        self.building_blocks = None # grg
 
     def _verbose_reporter(self, run_details=None):
         """A report of the progress of the evolution process.
@@ -426,7 +436,6 @@ class BaseSymbolic(BaseEstimator, metaclass=ABCMeta):
             Returns self.
 
         """
-        print('Forza Italia!')
         
         random_state = check_random_state(self.random_state)
 
@@ -663,8 +672,8 @@ class BaseSymbolic(BaseEstimator, metaclass=ABCMeta):
                 # Remove old generations
                 self._programs[gen - 1] = None
 
-            # At the desired generation, extract the promising building blocks from the generation's programs:
-            if gen==3 or gen==5 or gen==10 or gen==19: 
+            # grg - At the desired generation, extract the promising building blocks from the generation's programs:
+            if gen==3 or gen==5 or gen==10 or gen==15 or gen==19: 
                 # print(' ')
                 # print('generation: ', gen)
                 self.building_blocks = get_building_blocks(self.building_blocks, self._programs[gen], parsimony_coefficient, X, params)
