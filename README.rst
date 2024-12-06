@@ -1,3 +1,8 @@
+# Genetic Programming x MD-Loop
+A revised version of the original gplearn repository, tailored to serve as an auxiliary method for MD-Loop. This implementation adapts the original Genetic Programming methodology to integrate seamlessly with MD-Loop, which depends on this repository for specific functionalities.
+
+
+
 .. image:: https://img.shields.io/pypi/v/gplearn.svg
     :target: https://pypi.python.org/pypi/gplearn/
     :alt: Version
